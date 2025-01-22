@@ -14,8 +14,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-	title: 'Let’s Win Pancreatic Cancer',
-	description: 'Let’s Win Pancreatic Cancer',
+	title: "Let's Win Pancreatic Cancer",
+	description: "Let's Win Pancreatic Cancer",
 };
 
 export default function RootLayout({
@@ -25,11 +25,12 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en">
-			<body
+			<div
+				id="pancreatic-cancer-map"
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
 				{children}
-			</body>
+			</div>
 		</html>
 	);
 }
