@@ -2,11 +2,124 @@
 'use client';
 
 import { useState } from 'react';
-import { doctorsData } from '@/app/data/doctorsData';
+
 import { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
-import { stateAbbreviations } from '@/app/data/doctorsData';
+
+export const stateAbbreviations: Record<string, string> = {
+	Alabama: 'AL',
+	Alaska: 'AK',
+	Arizona: 'AZ',
+	Arkansas: 'AR',
+	California: 'CA',
+	Colorado: 'CO',
+	Connecticut: 'CT',
+	Delaware: 'DE',
+	'District Of Columbia': 'DC',
+	Florida: 'FL',
+	Georgia: 'GA',
+	Hawaii: 'HI',
+	Idaho: 'ID',
+	Illinois: 'IL',
+	Indiana: 'IN',
+	Iowa: 'IA',
+	Kansas: 'KS',
+	Kentucky: 'KY',
+	Louisiana: 'LA',
+	Maine: 'ME',
+	Maryland: 'MD',
+	Massachusetts: 'MA',
+	Michigan: 'MI',
+	Minnesota: 'MN',
+	Mississippi: 'MS',
+	Missouri: 'MO',
+	Montana: 'MT',
+	Nebraska: 'NE',
+	Nevada: 'NV',
+	'New Hampshire': 'NH',
+	'New Jersey': 'NJ',
+	'New Mexico': 'NM',
+	'New York': 'NY',
+	'North Carolina': 'NC',
+	'North Dakota': 'ND',
+	Ohio: 'OH',
+	Oklahoma: 'OK',
+	Oregon: 'OR',
+	Pennsylvania: 'PA',
+	'Rhode Island': 'RI',
+	'South Carolina': 'SC',
+	'South Dakota': 'SD',
+	Tennessee: 'TN',
+	Texas: 'TX',
+	Utah: 'UT',
+	Vermont: 'VT',
+	Virginia: 'VA',
+	Washington: 'WA',
+	'West Virginia': 'WV',
+	Wisconsin: 'WI',
+	Wyoming: 'WY',
+};
+
+function processDoctorDataWithStateAbbreviations(
+	doctorData: any[],
+	stateAbbreviations: Record<string, string>
+): Record<
+	string,
+	Array<{ name: string; specialty: string; address: string; county: string }>
+> {
+	// Sort the doctorData by total_pancreatic_cancer in descending order
+	const sortedDoctorData = doctorData.sort((a, b) => {
+		const cancerA = parseInt(a.total_pancreatic_cancer, 10) || 0;
+		const cancerB = parseInt(b.total_pancreatic_cancer, 10) || 0;
+		return cancerB - cancerA;
+	});
+
+	const stateAbbreviationsReverse = Object.entries(stateAbbreviations).reduce(
+		(acc, [fullName, abbr]) => {
+			acc[abbr.toUpperCase()] = fullName;
+			return acc;
+		},
+		{} as Record<string, string>
+	);
+
+	return sortedDoctorData.reduce((acc, doctor) => {
+		const stateUpper = doctor.state.toUpperCase();
+		const fullStateName = stateAbbreviationsReverse[stateUpper] || stateUpper;
+
+		// Capitalize the first letter of each word in the state name
+		const stateKey = fullStateName
+			.split(' ')
+			.map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+			.join(' ');
+
+		if (!acc[stateKey]) {
+			acc[stateKey] = [];
+		}
+
+		acc[stateKey].push({
+			npi_number: doctor.npi_number,
+			name: doctor.provider_name,
+			specialty: doctor.primary_hcp_segment,
+			address: `${doctor.affiliated_hco}, ${doctor.city}, ${doctor.county}, ${stateUpper}, ${doctor.zip_code}`,
+			county: doctor.county
+				? doctor.county
+						.split(' ')
+						.map(
+							(word) =>
+								word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+						)
+						.join(' ')
+				: undefined,
+			total_whipple_procedures: doctor.total_whipple_procedures,
+			total_pancreatic_cancer: doctor.total_pancreatic_cancer,
+			url: doctor.url,
+		});
+
+		return acc;
+	}, {} as Record<string, Array<{ name: string; specialty: string; address: string; county: string }>>);
+}
+
 const limitStates = ['New York', 'Pennsylvania', 'Florida', 'Texas'];
 // Map of FIPS codes to state names
 const stateNames: { [key: string]: string } = {
@@ -74,6 +187,7 @@ type FilterContainerProps = {
 	onSearchChange: (query: string) => void;
 };
 function FilterContainer({
+	doctorData,
 	selectedState,
 	selectedSpecialty,
 	selectedCounty,
@@ -83,7 +197,7 @@ function FilterContainer({
 	onCountyChange,
 	onSearchChange,
 }: FilterContainerProps) {
-	const states = Object.keys(doctorsData)
+	const states = Object.keys(doctorData)
 		.filter((state) => {
 			return state.trim() !== '' && stateAbbreviations[state];
 		})
@@ -98,7 +212,7 @@ function FilterContainer({
 	const counties = selectedState
 		? Array.from(
 				new Set(
-					doctorsData[selectedState]
+					doctorData[selectedState]
 						.map((doctor) => doctor.county)
 						.filter((county) => county) // Filter out empty counties
 				)
@@ -306,18 +420,19 @@ type DoctorListProps = {
 };
 
 function DoctorList({
+	doctorData,
 	doctors,
 	selectedSpecialty,
 	selectedCounty,
 	searchQuery,
 	currentPage,
 	setCurrentPage,
+	loading,
 }: DoctorListProps) {
-	const [loading, setLoading] = useState(false);
 	const doctorsPerPage = 10;
 	const maxPageButtons = 5;
 
-	const allDoctors = Object.values(doctorsData).flat();
+	const allDoctors = Object.values(doctorData).flat();
 
 	let filteredDoctors = allDoctors.filter((doctor) => {
 		const specialties = doctor.specialty
@@ -438,9 +553,20 @@ function DoctorList({
 	}
 	return (
 		<div className="bg-white p-6 rounded-lg shadow-md">
-			<h2 className="text-2xl font-bold mb-4">
-				Doctors List ({filteredDoctors.length.toLocaleString()} doctors)
-			</h2>
+			{loading ? (
+				<h2 className="text-2xl font-bold mb-4">
+					Loading Doctors... Please wait.
+				</h2>
+			) : (
+				<h2 className="text-2xl font-bold mb-4">
+					Doctors List ({filteredDoctors.length.toLocaleString()} doctors)
+				</h2>
+			)}
+			{loading && (
+				<div className="flex justify-center items-center">
+					<div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-500"></div>
+				</div>
+			)}
 			{currentDoctors.length > 0 ? (
 				<>
 					<ul className="space-y-4">
@@ -530,14 +656,17 @@ function DoctorList({
 			)}
 		</div>
 	);
+	console.log('🚀 ~ loading:', loading);
 }
 
 export default function DoctorFinder() {
+	const [doctorData, setDoctorData] = useState([]);
 	const [selectedState, setSelectedState] = useState('');
 	const [selectedSpecialty, setSelectedSpecialty] = useState('');
 	const [selectedCounty, setSelectedCounty] = useState('');
 	const [currentPage, setCurrentPage] = useState(1);
-	const [searchQuery, setSearchQuery] = useState(''); // Added searchQuery state
+	const [searchQuery, setSearchQuery] = useState('');
+	const [loading, setLoading] = useState(true);
 
 	const handleStateChange = (state: string) => {
 		if (state !== selectedState) {
@@ -563,7 +692,7 @@ export default function DoctorFinder() {
 		setCurrentPage(1);
 	};
 
-	const allDoctors = Object.values(doctorsData).flat();
+	const allDoctors = Object.values(doctorData).flat();
 	const stateKeys = Object.entries(stateNames).reduce((acc, [key, value]) => {
 		acc[value] = value;
 		return acc;
@@ -573,13 +702,13 @@ export default function DoctorFinder() {
 
 	const limitedDoctors =
 		selectedState && limitStates.includes(selectedState)
-			? doctorsData[stateKey].slice(0, 2000)
+			? doctorData[stateKey].slice(0, 2000)
 			: selectedState
-			? doctorsData[selectedState]
+			? doctorData[selectedState]
 			: allDoctors;
 	const filteredDoctors = limitedDoctors.filter(
 		(doctor) =>
-			(selectedState === '' || doctorsData[selectedState]?.includes(doctor)) &&
+			(selectedState === '' || doctorData[selectedState]?.includes(doctor)) &&
 			(selectedSpecialty === '' ||
 				doctor.specialty
 					.toLowerCase()
@@ -594,8 +723,35 @@ export default function DoctorFinder() {
 		setCurrentPage(1);
 	}, [filteredDoctors.length]);
 
+	useEffect(() => {
+		const fetchDoctorData = async () => {
+			setLoading(true); // Show loader
+			try {
+				const response = await fetch('/api/fetchDoctorsData');
+
+				if (!response.ok) {
+					throw new Error('Network response was not ok');
+				}
+				const data = await response.json();
+
+				const transformedData = processDoctorDataWithStateAbbreviations(
+					data,
+					stateAbbreviations
+				);
+				setDoctorData(transformedData);
+			} catch (error) {
+				console.error('Failed to fetch doctor data:', error);
+			} finally {
+				setLoading(false); // Hide loader
+			}
+		};
+
+		fetchDoctorData();
+	}, []);
+
 	return (
 		<div className="flex flex-col items-center gap-8">
+			{/* Loader element */}
 			<FilterContainer
 				selectedState={selectedState}
 				selectedSpecialty={selectedSpecialty}
@@ -605,6 +761,7 @@ export default function DoctorFinder() {
 				onSpecialtyChange={handleSpecialtyChange}
 				onCountyChange={handleCountyChange}
 				onSearchChange={handleSearchChange}
+				doctorData={doctorData}
 			/>
 			<div className="w-full max-w-4xl mt-8">
 				<USMap
@@ -620,6 +777,8 @@ export default function DoctorFinder() {
 					searchQuery={searchQuery}
 					currentPage={currentPage}
 					setCurrentPage={setCurrentPage}
+					doctorData={doctorData}
+					loading={loading}
 				/>
 			</div>
 		</div>

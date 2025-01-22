@@ -41,6 +41,11 @@ function FileUploader() {
 					</p>
 				</div>
 			)}
+			<iframe
+				src="https://us-pancreatic-cancer-map.vercel.app/"
+				style={{ width: '100%', height: '100vh', border: 'none' }}
+				title="Pancreatic Cancer Map"
+			></iframe>
 		</div>
 	);
 }
