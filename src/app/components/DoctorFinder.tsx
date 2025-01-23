@@ -543,7 +543,6 @@ function DoctorList({
 	};
 
 	async function handleDoctorClick(doctor) {
-		setLoading(true);
 		if (doctor.url) {
 			window.open(doctor.url, '_blank'); // Open the doctor's URL in a new tab
 		} else {
@@ -727,7 +726,9 @@ export default function DoctorFinder() {
 		const fetchDoctorData = async () => {
 			setLoading(true); // Show loader
 			try {
-				const response = await fetch('/api/fetchDoctorsData');
+				const response = await fetch(
+					'https://us-pancreatic-cancer-map.vercel.app/api/fetchDoctorsData'
+				);
 
 				if (!response.ok) {
 					throw new Error('Network response was not ok');

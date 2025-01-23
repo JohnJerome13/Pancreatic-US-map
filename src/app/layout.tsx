@@ -25,12 +25,14 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en">
-			<div
-				id="pancreatic-cancer-map"
-				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-			>
-				{children}
-			</div>
+			<body>
+				<div
+					id="pancreatic-cancer-map"
+					className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+				>
+					{children}
+				</div>
+			</body>
 		</html>
 	);
 }
