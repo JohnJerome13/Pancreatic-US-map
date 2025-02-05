@@ -693,7 +693,7 @@ export default function DoctorFinder() {
 	const handleSearchChange = useCallback(
 		debounce((query: string) => {
 			track('Search Query', { query });
-		}, 300),
+		}, 500),
 		[]
 	);
 
