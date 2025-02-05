@@ -1,7 +1,9 @@
 // @ts-nocheck
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { track } from '@vercel/analytics';
+import { debounce } from 'lodash';
 
 import { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
@@ -362,6 +364,7 @@ function USMap({ onStateSelect, selectedState }: USMapProps) {
 
 			statePaths.on('click', function (event, d: any) {
 				const stateName = stateNames[d.id] || 'Unknown';
+				track('State Clicked', { state: stateName });
 				updateSelectedState(stateName, this);
 			});
 
@@ -544,9 +547,9 @@ function DoctorList({
 
 	async function handleDoctorClick(doctor) {
 		if (doctor.url) {
-			window.open(doctor.url, '_blank'); // Open the doctor's URL in a new tab
+			track('Doctor URL Clicked', { doctorName: doctor.name, url: doctor.url });
+			window.open(doctor.url, '_blank');
 		} else {
-			// Handle the case where the URL is not available
 			console.error('No URL available for this doctor');
 		}
 	}
@@ -655,7 +658,6 @@ function DoctorList({
 			)}
 		</div>
 	);
-	console.log('🚀 ~ loading:', loading);
 }
 
 export default function DoctorFinder() {
@@ -673,22 +675,32 @@ export default function DoctorFinder() {
 			setSelectedCounty('');
 		}
 		setSelectedState(state);
+		track('State Selected', { state });
 	};
 
 	const handleSpecialtyChange = (specialty: string) => {
 		setSelectedSpecialty(specialty);
 		setCurrentPage(1);
+		track('Specialty Selected', { specialty });
 	};
 
 	const handleCountyChange = (county: string) => {
 		setSelectedCounty(county);
 		setCurrentPage(1);
+		track('County Selected', { county });
 	};
 
-	const handleSearchChange = (query: string) => {
-		// Handler for search query
+	const handleSearchChange = useCallback(
+		debounce((query: string) => {
+			track('Search Query', { query });
+		}, 300),
+		[]
+	);
+
+	const handleSearchInputChange = (query: string) => {
 		setSearchQuery(query);
 		setCurrentPage(1);
+		handleSearchChange(query);
 	};
 
 	const allDoctors = Object.values(doctorData).flat();
@@ -713,7 +725,8 @@ export default function DoctorFinder() {
 					.toLowerCase()
 					.includes(selectedSpecialty.toLowerCase())) &&
 			(selectedCounty === '' ||
-				doctor.county.toLowerCase() === selectedCounty.toLowerCase()) &&
+				(doctor.county &&
+					doctor.county.toLowerCase() === selectedCounty.toLowerCase())) &&
 			(searchQuery === '' ||
 				doctor.name.toLowerCase().includes(searchQuery.toLowerCase()))
 	);
@@ -726,9 +739,7 @@ export default function DoctorFinder() {
 		const fetchDoctorData = async () => {
 			setLoading(true); // Show loader
 			try {
-				const response = await fetch(
-					'https://us-pancreatic-cancer-map.vercel.app/api/fetchDoctorsData'
-				);
+				const response = await fetch('/api/fetchDoctorsData');
 
 				if (!response.ok) {
 					throw new Error('Network response was not ok');
@@ -761,14 +772,16 @@ export default function DoctorFinder() {
 				onStateChange={handleStateChange}
 				onSpecialtyChange={handleSpecialtyChange}
 				onCountyChange={handleCountyChange}
-				onSearchChange={handleSearchChange}
+				onSearchChange={handleSearchInputChange}
 				doctorData={doctorData}
 			/>
 			<div className="w-full max-w-4xl mt-8">
-				<USMap
-					onStateSelect={handleStateChange}
-					selectedState={selectedState}
-				/>
+				{Object.keys(doctorData).length > 0 && (
+					<USMap
+						onStateSelect={handleStateChange}
+						selectedState={selectedState}
+					/>
+				)}
 			</div>
 			<div className="w-full max-w-4xl mt-8">
 				<DoctorList

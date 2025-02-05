@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
+import { Analytics } from '@vercel/analytics/next';
 
 const geistSans = localFont({
 	src: './fonts/GeistVF.woff',
@@ -25,13 +26,11 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en">
-			<body>
-				<div
-					id="pancreatic-cancer-map"
-					className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-				>
-					{children}
-				</div>
+			<body
+				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+			>
+				{children}
+				<Analytics />
 			</body>
 		</html>
 	);
