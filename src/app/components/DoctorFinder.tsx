@@ -739,7 +739,9 @@ export default function DoctorFinder() {
 		const fetchDoctorData = async () => {
 			setLoading(true); // Show loader
 			try {
-				const response = await fetch('/api/fetchDoctorsData');
+				const response = await fetch(
+					'https://us-pancreatic-cancer-map.vercel.app/api/fetchDoctorsData'
+				);
 
 				if (!response.ok) {
 					throw new Error('Network response was not ok');
