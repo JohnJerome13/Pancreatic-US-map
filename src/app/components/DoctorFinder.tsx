@@ -582,9 +582,13 @@ function DoctorList({
 									}}
 									className="block bg-gray-100 p-4 rounded hover:bg-gray-200 text-[#815FA0] transition-colors duration-200"
 								>
-									<strong className="text-lg block underline">
+									<strong className="text-lg block underline mb-2">
 										{doctor.name}
 									</strong>
+
+									<span className="sm:absolute sm:top-2 sm:right-2 bg-[#815FA0] text-white px-2 py-1 rounded">
+										{doctor.specialty}
+									</span>
 									<p className="mt-2 text-gray-600 group-hover:text-[#815FA0]">
 										Address: {doctor.address}
 										{/* <br />
@@ -592,9 +596,6 @@ function DoctorList({
 										<br /> total_whipple_procedures:{' '}
 										{doctor.total_whipple_procedures} */}
 									</p>
-									<span className="absolute top-2 right-2 bg-[#815FA0] text-white px-2 py-1 rounded">
-										{doctor.specialty}
-									</span>
 								</a>
 							</li>
 						))}
